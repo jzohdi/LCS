@@ -1,4 +1,4 @@
-# Core Software Engineering Challenge
+# Problem
 Given a large number of binary files, write a orogram that finds the longest strand of bytes that is identical between two or more files.
 
 Output (Display):
