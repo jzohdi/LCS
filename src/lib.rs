@@ -1,5 +1,6 @@
 pub mod reader;
 pub mod suffix_tree;
+mod ukkonen;
 
 #[derive(Debug)]
 struct FileLocation {
@@ -60,14 +61,23 @@ impl SearchResult {
 // }
 
 pub fn search(file1: &reader::ParsedFile, file2: &reader::ParsedFile) -> SearchResult {
-    polynomial_search(file1, file2)
-    // suffix_tree_search(file1, file2)
+    // polynomial_search(file1, file2)
+    // suffix_tree_search(file1, file2);
+    optimized_suffix_search(file1, file2)
+}
+
+fn optimized_suffix_search(file1: &reader::ParsedFile, file2: &reader::ParsedFile) -> SearchResult  {
+    let result = SearchResult::new(file1.name(), file2.name()); 
+
+    ukkonen::ukkonen_create(&file2.bytes());
+    
+    result
 }
 
 fn suffix_tree_search(file1: &reader::ParsedFile, file2: &reader::ParsedFile) -> SearchResult {
     let mut result = SearchResult::new(file1.name(), file2.name()); 
     println!("creating suffix tree");
-    let mut tree = suffix_tree::SuffixTree::create_from(file2.bytes());
+    let tree = suffix_tree::SuffixTree::create_from(file2.bytes());
     println!("done");
     let file1_bytes = file1.bytes();
 
