@@ -114,20 +114,6 @@ pub fn ukkonen_create(array: &Vec<u8>) {
     } 
 }
 
-fn get_index(curr_node: &UNode, length: usize) -> usize {
-    match curr_node.range.start {
-        EdgeIndex::Index(i) => i + length,
-        _ => panic!("get index from active node, node's start range not set"),
-    }
-}
-
-fn node_start(node: &UNode) -> usize {
-    match node.range.start {
-        EdgeIndex::Index(i) => i,
-        _ => panic!("get index from active node, node's start range not set"),
-    }
-}
-
 #[derive(Debug)]
 enum LinkNode {
     None,
@@ -159,7 +145,7 @@ enum NodeType {
 
 fn node_type_string(range: &Range) -> NodeType {
     match range.end {
-        EdgeIndex::End => NodeType::Extenal,
+        None => NodeType::Extenal,
         _ => NodeType::Internal
     }
 }
@@ -175,7 +161,7 @@ impl UNode {
         }
     }
     pub fn length(&self) -> usize {
-        self.range.length()
+        range_length(&self.range)
     }
 
     pub fn set_link(&mut self, link: LinkNode) {
@@ -183,32 +169,21 @@ impl UNode {
     }
 }
 
-fn get_range_start(node: &UNode) -> usize {
-    match node.range.start {
-        EdgeIndex::Index(i) => i,
-        _ => panic!("start not set!")
-    }
-}
 
 fn unpack_range(range: &Range) -> String {
-    let start = match range.start {
-        EdgeIndex::Index(i) => format!("{}", i),
-        _ => panic!("Range start not set in unpack."),
-    };
+    let start = range.start;
     let end = match range.end {
-        EdgeIndex::Index(i) => format!("{}", i),
-        EdgeIndex::End => String::from("end"),
+        None => String::from("end"),
+        i => format!("{}", i.unwrap()),
     };
     format!("{} - {}", start, end)
 }
 
 fn get_new_leaf_range(curr_node_range: &Range, end: usize) -> Range {
-    match curr_node_range.start {
-        EdgeIndex::Index(i) => Range {
-            start: EdgeIndex::Index(i + end),
-            end: EdgeIndex::End
-        },
-        _ => panic!("get new leaf range, range start not set")
+    let i = curr_node_range.start;
+    Range {
+        start: i + end,
+        end: None
     }
 }
 
@@ -226,6 +201,9 @@ struct AddNodeConfig {
  * 
  * =========================================================================================================
  */
+// TODO: use capacity and do a doubling function like ArrayList
+// TODO: with capacity, change the inc function to double if size = capacity - 1
+// START with larger capacity since we know this tree will be large
 #[derive(Debug)]
 struct UkkonenTree {
     pub root: UNode,
@@ -241,8 +219,8 @@ impl UkkonenTree {
     // ==========================================================================================
     pub fn new() -> UkkonenTree {
         let root_range = Range {
-            start: EdgeIndex::Index(0),
-            end: EdgeIndex::End,
+            start: 0,
+            end: None,
         };
         let width = 256;
         // creates node stores with root node
@@ -308,8 +286,8 @@ impl UkkonenTree {
 
     fn new_leaf(self: &'_ mut Self, order: usize, key: u8, start: usize) -> usize {
         let range = Range {
-            start: EdgeIndex::Index(start),
-            end: EdgeIndex::End 
+            start,
+            end: None 
         };
         let hash_key = self.hash(order, key);
         self.inc_size();
@@ -319,8 +297,8 @@ impl UkkonenTree {
 
     pub fn add_leaf(&mut self, order: usize, key: u8, start: usize) -> usize {
         let range = Range {
-            start: EdgeIndex::Index(start),
-            end: EdgeIndex::End 
+            start: start,
+            end: None 
         };
         let hash_key = self.hash(order, key);
         self.nodes[hash_key] = Some(UNode::new(range, LinkNode::None, self.next_order()));
@@ -427,7 +405,7 @@ impl UkkonenTree {
         println!("{:indent$}id: {}, {}", 
             "", 
             curr_node_index, 
-            node.range.to_str(), 
+            range_to_str(&node.range), 
             indent=depth * 4);
 
         if !self.is_leaf(curr_node_index) {
@@ -435,7 +413,7 @@ impl UkkonenTree {
         }
 
         // if the node is an external node, it doesn't have any children
-        if let EdgeIndex::End = node.range.end {
+        if let None = node.range.end {
             return;
         }
         let start = node.order * self.width;
@@ -479,15 +457,17 @@ impl UkkonenTree {
     }
     fn edge_is_leaf(&self, node_key: Option<usize>, child_key: u8) -> bool  {
         let child_hash = self.child_hash(node_key, child_key);
-        match self.nodes[child_hash].as_ref().unwrap().range.end {
-            EdgeIndex::End => true,
+        let child = self.nodes[child_hash].as_ref().unwrap(); 
+        // a child is a leaf if its end is end and its order is not 0 (is the root)
+        match child.range.end {
+            None => child.order != 0, 
             _ => false,
         }
     }
 
     fn is_leaf(&self, key: usize) -> bool {
         match self.nodes[key].as_ref().unwrap().range.end {
-            EdgeIndex::End => true,
+            None => true,
             _ => false,
         }        
     }
@@ -512,76 +492,48 @@ struct NodeConfig {
     pub key: u8
 }
 
+/** start must alwas be an index
+ *  end can be none (symbolic end) or an index */
 #[derive(Debug)]
 struct Range {
-    pub start: EdgeIndex,
-    pub end: EdgeIndex,
+    pub start: usize,
+    pub end: Option<usize>,
+}
+
+// is an error if does not have end ind
+fn range_length(range: &Range) -> usize {
+    let start = range.start;
+    match range.end {
+        Some(i) => i - start + 1,
+        _ => panic!("end index not set")
+    }
+}
+
+fn range_to_str(range: &Range) -> String {
+    let start = range.start;
+    match range.end {
+        None => format!("{} - {}", start, "end"),
+        Some(i) => format!("{} - {}", start, i),
+    }
 }
 
 impl Range {
     pub fn set_start(&mut self, start: usize) {
-        self.start = EdgeIndex::Index(start);
+        self.start = start;
     }
     pub fn set_end(&mut self, end: Option<usize>) {
-        match end {
-            None => {self.end = EdgeIndex::End;},
-            Some(i) => { self.end = EdgeIndex::Index(i)}
-        }
+        self.end = end;
     }
     pub fn get_start(&self) -> usize {
-        match self.start {
-            EdgeIndex::Index(i) => i,
-            _ => panic!("get start for range: start not set."),
-        }
-    }
-    pub fn has_end_index(&self) -> bool {
-        match self.end {
-            EdgeIndex::Index(_) => true,
-            _ => false,
-        }
-    }
-    // is an error if does not have end ind
-    pub fn length(&self) -> usize {
-        let start = self.get_start();
-        match self.end {
-            EdgeIndex::Index(i) => i - start + 1,
-            _ => panic!("end index not set")
-        }
-    }
-
-    pub fn to_str(&self) -> String {
-        let start = match self.start {
-            EdgeIndex::Index(i) => i,
-            _ => panic!("start not set in to_str")
-        };
-        match self.end {
-            EdgeIndex::Index(i) => format!("{} - {}", start, i),
-            EdgeIndex::End => format!("{} - {}", start, "end"),
-        }
+        self.start
     }
 
     pub fn clone(range: &Range) -> Range {
-        let start = match range.start {
-            EdgeIndex::Index(i) => i,
-            _ => panic!("range clone, given range no start set"),
-        };
-        match range.end {
-            EdgeIndex::End => Range {
-                start: EdgeIndex::Index(start),
-                end: EdgeIndex:: End,
-            },
-            EdgeIndex::Index(e) => Range {
-                start: EdgeIndex::Index(start),
-                end: EdgeIndex::Index(e)
-            }
+        Range {
+            start: range.start,
+            end: range.end
         }
     }
-}
-
-#[derive(Debug)]
-enum EdgeIndex {
-    Index(usize),
-    End,
 }
 
 #[cfg(test)]

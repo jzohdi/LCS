@@ -9,11 +9,10 @@ Output (Display):
 ## Algorithm Steps
 Input: list of filenames:
 
-1. Create a list of all possible unique pairs of files
-2. Starting with the first pairs calculate the longest common subbytes 
-3. Continue to the next pair, but now start with the previously discovered length
-4. For each successive pair, update the max length so far (and the bytes, index of the pair found, offset in each file), and use the longest length so far as search starting point
-5. Finally check all files except the two where longest common bytes were found for this sequence.
+1. Loop through each file, (i in 0..n) and compare to all rest (j in i+1..n)
+2. Update max at each comparison if a longer byte sequence is found. This computes the longest substring that is present between all unique pairs of files. This is the minimum requirement for the stand.
+3. Once we know the longest strand between at least two files, finally check all files except the two where longest common bytes were found for this sequence.
+4. Each comparison can be made in parallel using threads as long as the check and update of the max found so far is done atomically.
 
 ## Running
 I used rust to implement this solution and therefore cargo/rustc is required to build.
