@@ -107,14 +107,17 @@ fn main() {
             Some(i) => {
                 find_all.push(
                     SequenceLocation {
-                        filname: String::from(parsed_files[i]),
+                        filename: String::from(parsed_files[i]),
                         start_pos: i
                     }
                 );
             }
         }
     }
-    println!("result: {:?}", find_all);
+    
+    println!("\nLongest strand found: {}", length);
+    println!("Files found in:\n{}", find_all.iter().map(|s| format!("{} at position {}", s.filename, s.start_pos)).collect::<Vec<String>>().connect("\n"));
+    println!("\n");
 }
 
 struct SearchFor<'a > {
@@ -137,31 +140,23 @@ fn search_for_in(search_in: &Vec<u8>, search_for: &SearchFor) -> Option<usize> {
     };
 
     let target = &search_for.bytes[search_for.start..=search_for.stop];
-    let mut i = 0;
     let mut t = 0;
     // let search_for_len = search_for.stop - search_for.start;
     
     // println!("--- Starting Search:");
-    while i < search_in.len() {
-        if t == target.len() { // if equals length then whe have found the sequence
-            break;
-        };
+    for i in 0..search_in.len() {
         let checking_in = &search_in[i]; 
         // println!("checking {}(index {}) == {}(offset from start {})", checking_in, i, &target[t], t);
-        if &search_in[i] == &target[t] {
+        if checking_in == &target[t] {
             t += 1;
         } else {
             t = 0;
         };
-        i += 1;
+        if t == target.len() { // if equals length then whe have found the sequence
+            return Some(i + 1 - t);
+        };
     };
-    
-    // did not find
-    if t < target.len() {
-        None
-    } else {
-        Some(i - t)
-    }
+    None
 }
 
 fn current_search_for_byte(search_for: &SearchFor, offset: usize) -> u8 {
@@ -172,11 +167,11 @@ fn found_locations(name1: &str, pos1: usize, name2: &str, pos2: usize) -> Vec<Se
     let mut results: Vec<SequenceLocation> = vec![];
 
     results.push(SequenceLocation {
-        filname: String::from(name1),
+        filename: String::from(name1),
         start_pos: pos1
     });
     results.push(SequenceLocation {
-        filname: String::from(name2),
+        filename: String::from(name2),
         start_pos: pos2
     });
 
@@ -187,11 +182,11 @@ fn locations_from(max_res: &SearchResult) -> Vec<SequenceLocation>{
     let mut results: Vec<SequenceLocation> = vec![];
 
     results.push(SequenceLocation {
-        filname: max_res.name1(),
+        filename: max_res.name1(),
         start_pos: max_res.offset1()
     });
     results.push(SequenceLocation {
-        filname: max_res.name2(),
+        filename: max_res.name2(),
         start_pos: max_res.offset2()
     });
 
@@ -200,7 +195,7 @@ fn locations_from(max_res: &SearchResult) -> Vec<SequenceLocation>{
 
 #[derive(Debug)]
 struct SequenceLocation {
-    pub filname: String,
+    pub filename: String,
     pub start_pos: usize
 }
 

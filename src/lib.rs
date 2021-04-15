@@ -187,7 +187,7 @@ fn polynomial_search(file1: &reader::ParsedFile, file2: &reader::ParsedFile) -> 
           if file1.bytes()[x - 1] == file2.bytes()[y - 1] {
               table[1][y] = table[0][y - 1] + 1;
               if table[1][y] > result.length() {
-                  result.set(table[1][y], x , y);
+                  result.set(table[1][y], x - table[1][y] , y - table[1][y]);
               }
           } else {
               table[1][y] = 0;

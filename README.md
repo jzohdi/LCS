@@ -31,7 +31,8 @@ LCS/
 |  sample.2
 |  ... 
 ```
-At the root of the directory (`LCS/`) call `cargo run`, to build and execute the project.
+At the root of the directory (`LCS/`) call `cargo run --release`, to build and execute the project.
+Note: `--release` is important for making executable optimizations that result in quick runtime.
 
 ## Notes
 First algorithm implemented to find longest sub bytes of two files used a O(nm) solutions using dynamic programming. The runtime for this was ok, but I think it could be improved. The second algorithm implemented was creating a suffix tree, but a couple problems arrised from this. The first problem is that the naive suffix tree creating is O(n^2), second is that the tree would be too big for memory, and does not benefit from L1 cache. This second algorithm performs abysmally. 
